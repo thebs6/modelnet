@@ -182,11 +182,12 @@ if __name__ == '__main__':
     epoch = args.epoch
     loss_fn = nn.CrossEntropyLoss()
     for epo in range(1, 1 + epoch):
-        model_encoder_scheduler.step()
-        img_encoder_scheduler.step()
-        relation_net_scheduler.step()
+
 
         acc, loss = train_epoch(epo, imgs_loader, get_model_img, model_encoder, img_encoder, relation_net,
                            model_encoder_optimizer, img_encoder_optimizer, relation_net_optimizer, loss_fn,
                            model_dict=model_dict, model_img_per_class=model_img_per_class)
+        model_encoder_scheduler.step()
+        img_encoder_scheduler.step()
+        relation_net_scheduler.step()
         print("acc",acc, "loss", loss)
