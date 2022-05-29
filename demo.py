@@ -13,7 +13,7 @@ import numpy as np
 from PIL import Image
 from tqdm import tqdm
 import pickle
-
+import tensorboard
 from PDataSet import PDataSet
 
 
@@ -49,7 +49,7 @@ def parse_opt():
     parser.add_argument('--t_batch', default=16, type=int)
     parser.add_argument('--v_batch', default=64, type=int)
     parser.add_argument('--image_size', default=224, type=int)
-    parser.add_argument('--lr', default=0.01, type=float)
+    parser.add_argument('--lr', default=0.001, type=float)
     parser.add_argument('--model_folder', default='./model')
     parser.add_argument('--workers', default=0, type=int)
     parser.add_argument('--scheduler', default='StepLR')
@@ -95,31 +95,20 @@ class net(nn.Module):
         return out
 
 
-def train_epoch(epo, train_loader, model_imgs, model_encoder, img_encoder, relation_net,
-                model_encoder_optimizer, img_encoder_optimizer, relation_net_optimizer, loss_fn, model_dict, model_img_per_class):
-    model_encoder.eval()
-    img_encoder.eval()
-    relation_net.eval()
-    model = net(model_encoder, img_encoder, relation_net)
+def train_epoch(epo, train_loader, model_imgs, model, optimizer, loss_fn, model_dict, model_img_per_class):
+    model.train()
     epoch_loss = 0.0
     accuracy = 0.0
-    epoch_data_sum = 0
     bar = tqdm(train_loader, total=len(train_loader), position=0)
     for batch, target in bar:
         batch, target = batch.cuda(), target.cuda()
         model_images = torch.from_numpy(model_imgs(model_dict, model_img_per_class, 0)).to(torch.float32).cuda()
         output = model(model_images, batch)
         loss = loss_fn(output, target)
-        model_encoder_optimizer.zero_grad()
-        img_encoder_optimizer.zero_grad()
-        relation_net_optimizer.zero_grad()
-
+        optimizer.zero_grad()
         loss.backward()
         accuracy += (output.argmax(1) == target).sum()
-        model_encoder_optimizer.step()
-        img_encoder_optimizer.step()
-        relation_net_optimizer.step()
-
+        optimizer.step()
         epoch_loss += loss.item()
     return accuracy / (train_loader.batch_size * len(train_loader)), epoch_loss / len(train_loader)
 
@@ -147,11 +136,12 @@ if __name__ == '__main__':
     # model_v = np.concatenate(model_v, axis=0)
     learn_rate = args.lr
     model_img_per_class = args.model_img_per_class
+
+    #----------------------- 网络-----------------------#
     feature_size = 256
     model_encoder = models.video.r3d_18().cuda()
     model_encoder.fc = nn.Linear(model_encoder.fc.in_features, feature_size).cuda()
     img_encoder = get_model_encoder(feature_size).cuda()
-
     relation_net = nn.Sequential(
         nn.Linear(feature_size * 2 * 9, feature_size // 2),
         nn.ReLU(),
@@ -162,32 +152,26 @@ if __name__ == '__main__':
         nn.Linear(feature_size // 4, 9),
         nn.LogSoftmax(dim=1)
     ).cuda()
+    model = net(model_encoder, img_encoder, relation_net)
+    # ----------------------- 网络-----------------------#
 
-    model_encoder_optimizer = torch.optim.Adam(model_encoder.parameters(), lr=learn_rate)
-    img_encoder_optimizer = torch.optim.Adam(img_encoder.parameters(), lr=learn_rate)
-    relation_net_optimizer = torch.optim.Adam(relation_net.parameters(), lr=learn_rate)
+    # ----------------------- 模型相关-----------------------#
+    model_optimizer = torch.optim.Adam(model.parameters(), lr=learn_rate)
+    model_scheduler = StepLR(model_optimizer, step_size=10, gamma=0.1)
+    # ----------------------- 模型相关-----------------------#
 
-    model_encoder_scheduler = StepLR(model_encoder_optimizer, step_size=10, gamma=0.1)
-    img_encoder_scheduler = StepLR(model_encoder_optimizer, step_size=10, gamma=0.1)
-    relation_net_scheduler = StepLR(model_encoder_optimizer, step_size=10, gamma=0.1)
+
+    # ----------------------- 数据相关-----------------------#
 
     train_data = PDataSet(args, args.init_csv, 'train', transform=train_transform, model_dict=model_dict,
                           model_img_per_class=model_img_per_class)
     imgs_loader = DataLoader(train_data, batch_size=args.t_batch, shuffle=True, num_workers=args.workers,
                              drop_last=False)
-
-    # model_imgs_loader = DataLoader(train_data, batch_size=args.t_batch, shuffle=True, num_workers=args.workers,
-    #                                drop_last=False)
-
+    # ----------------------- 数据相关-----------------------#
     epoch = args.epoch
     loss_fn = nn.CrossEntropyLoss()
     for epo in range(1, 1 + epoch):
-
-
-        acc, loss = train_epoch(epo, imgs_loader, get_model_img, model_encoder, img_encoder, relation_net,
-                           model_encoder_optimizer, img_encoder_optimizer, relation_net_optimizer, loss_fn,
+        acc, loss = train_epoch(epo, imgs_loader, get_model_img, model, model_optimizer, loss_fn,
                            model_dict=model_dict, model_img_per_class=model_img_per_class)
-        model_encoder_scheduler.step()
-        img_encoder_scheduler.step()
-        relation_net_scheduler.step()
+        model_scheduler.step()
         print("acc",acc, "loss", loss)
