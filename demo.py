@@ -104,10 +104,10 @@ def train_epoch(epo, train_loader, model_imgs, model_encoder, img_encoder, relat
     epoch_data_sum = 0
     model_img_per_class = 5
     bar = tqdm(train_loader, total=len(train_loader), position=0)
-    for  batch, target in bar:
+    for batch, target in bar:
         batch, target = batch.cuda(), target.cuda()
         model_images = torch.from_numpy(model_imgs(model_dict, model_img_per_class, 0)).to(torch.float32).cuda()
-        output = model(model_images, batch )
+        output = model(model_images, batch)
         loss = loss_fn(output, target)
         model_encoder_optimizer.zero_grad()
         img_encoder_optimizer.zero_grad()
@@ -125,7 +125,7 @@ def train_epoch(epo, train_loader, model_imgs, model_encoder, img_encoder, relat
 
 def get_model_img(model_dict, model_img_per_class, item):
     model_img = [v['imgs_v'][random.randint(0, 100, model_img_per_class)] for v in model_dict]
-    model_img = np.concatenate(np.expand_dims(model_img, axis=0), axis= 0)
+    model_img = np.concatenate(np.expand_dims(model_img, axis=0), axis=0)
     model_img = np.transpose(model_img, (0, 4, 1, 2, 3))
     return model_img
 
@@ -186,5 +186,6 @@ if __name__ == '__main__':
         relation_net_scheduler.step()
 
         loss = train_epoch(epo, imgs_loader, get_model_img, model_encoder, img_encoder, relation_net,
-                           model_encoder_optimizer, img_encoder_optimizer, relation_net_optimizer, loss_fn, model_dict=model_dict)
+                           model_encoder_optimizer, img_encoder_optimizer, relation_net_optimizer, loss_fn,
+                           model_dict=model_dict)
         print(loss)
