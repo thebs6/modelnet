@@ -101,6 +101,7 @@ def train_epoch(epo, train_loader, model_imgs, model, optimizer, loss_fn, model_
     epoch_loss = 0.0
     accuracy = 0.0
     bar = tqdm(train_loader, total=len(train_loader), position=0)
+    bar.set_postfix({'epoch' : epo})
     for batch, target in bar:
         batch, target = batch.cuda(), target.cuda()
         model_images = torch.from_numpy(model_imgs(model_dict, model_img_per_class, 0)).to(torch.float32).cuda()
