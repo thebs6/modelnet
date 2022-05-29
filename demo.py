@@ -89,11 +89,11 @@ class net(nn.Module):
         model_feature = model_feature.unsqueeze(0).repeat(batch, 1, 1)  # (batch, 9, 256)
         img_feature = self.img_encoder(img)  # (batch, 256)
         img_feature = img_feature.unsqueeze(1).repeat(1, 9, 1)  # (batch, 9, 256)
-        similarity = torch.cosine_similarity(img_feature, model_feature, dim=2)
-        # out = torch.concat([img_feature, model_feature], dim=2)  # (batch, 9, 512)
-        # out = out.view(batch, -1)
-        # out = self.relation_net(out)
-        return similarity
+        # similarity = torch.cosine_similarity(img_feature, model_feature, dim=2)
+        out = torch.concat([img_feature, model_feature], dim=2)  # (batch, 9, 512)
+        out = out.view(batch, -1)
+        out = self.relation_net(out)
+        return out
 
 
 def train_epoch(epo, train_loader, model_imgs, model, optimizer, loss_fn, model_dict, model_img_per_class):
