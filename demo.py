@@ -44,6 +44,7 @@ def parse_opt():
     parser.add_argument('--image_folder',
                         default=r'D:\Study\fly\experiments\VLP2_3000')
     parser.add_argument('--init_csv', default=r'D:\Study\fly\paper_code\LearningToCompare_FSL\demo\vlp3.csv')
+    parser.add_argument('--model_dict', default='./model_dict.pkl')
     parser.add_argument('--epoch', default=30, type=int)
     parser.add_argument('--t_batch', default=16, type=int)
     parser.add_argument('--v_batch', default=64, type=int)
@@ -140,7 +141,7 @@ if __name__ == '__main__':
     ])
 
     # model_dict = get_model_imgs()[0:-1]
-    with open('./model_dict.pkl', 'rb') as tf:
+    with open(args.model_dict, 'rb') as tf:
         model_dict = pickle.load(tf)
     # model_v = [np.expand_dims(v['imgs_v'], axis=0) for v in model_dict]
     # model_v = np.concatenate(model_v, axis=0)
