@@ -186,7 +186,7 @@ if __name__ == '__main__':
         img_encoder_scheduler.step()
         relation_net_scheduler.step()
 
-        loss = train_epoch(epo, imgs_loader, get_model_img, model_encoder, img_encoder, relation_net,
+        acc, loss = train_epoch(epo, imgs_loader, get_model_img, model_encoder, img_encoder, relation_net,
                            model_encoder_optimizer, img_encoder_optimizer, relation_net_optimizer, loss_fn,
                            model_dict=model_dict)
-        print(loss)
+        print("acc",acc, "loss", loss)
