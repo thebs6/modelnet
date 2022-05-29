@@ -62,6 +62,7 @@ def parse_opt():
     parser.add_argument('--model_mode', default=0, type=int)
     parser.add_argument('--account', type=str)
     parser.add_argument('--image_folder_type', default=1, type=int)
+    parser.add_argument('--model_img_per_class', default=5, type=int)
 
     args = parser.parse_args()
     return args
@@ -95,7 +96,7 @@ class net(nn.Module):
 
 
 def train_epoch(epo, train_loader, model_imgs, model_encoder, img_encoder, relation_net,
-                model_encoder_optimizer, img_encoder_optimizer, relation_net_optimizer, loss_fn, model_dict):
+                model_encoder_optimizer, img_encoder_optimizer, relation_net_optimizer, loss_fn, model_dict, model_img_per_class):
     model_encoder.eval()
     img_encoder.eval()
     relation_net.eval()
@@ -103,7 +104,6 @@ def train_epoch(epo, train_loader, model_imgs, model_encoder, img_encoder, relat
     epoch_loss = 0.0
     accuracy = 0.0
     epoch_data_sum = 0
-    model_img_per_class = 5
     bar = tqdm(train_loader, total=len(train_loader), position=0)
     for batch, target in bar:
         batch, target = batch.cuda(), target.cuda()
@@ -146,7 +146,7 @@ if __name__ == '__main__':
     # model_v = [np.expand_dims(v['imgs_v'], axis=0) for v in model_dict]
     # model_v = np.concatenate(model_v, axis=0)
     learn_rate = args.lr
-    model_img_per_class = 10
+    model_img_per_class = args.model_img_per_class
     feature_size = 256
     model_encoder = models.video.r3d_18().cuda()
     model_encoder.fc = nn.Linear(model_encoder.fc.in_features, feature_size).cuda()
