@@ -63,6 +63,7 @@ def parse_opt():
     parser.add_argument('--account', type=str)
     parser.add_argument('--image_folder_type', default=1, type=int)
     parser.add_argument('--model_img_per_class', default=5, type=int)
+    parser.add_argument('--d3model_pretrain', default=True, type=bool)
 
     args = parser.parse_args()
     return args
@@ -101,7 +102,7 @@ def train_epoch(epo, train_loader, model_imgs, model, optimizer, loss_fn, model_
     epoch_loss = 0.0
     accuracy = 0.0
     bar = tqdm(train_loader, total=len(train_loader), position=0)
-    bar.set_postfix({'epoch' : epo})
+    bar.set_postfix({'epoch': epo})
     for batch, target in bar:
         batch, target = batch.cuda(), target.cuda()
         model_images = torch.from_numpy(model_imgs(model_dict, model_img_per_class, 0)).to(torch.float32).cuda()
@@ -139,9 +140,9 @@ if __name__ == '__main__':
     learn_rate = args.lr
     model_img_per_class = args.model_img_per_class
 
-    #----------------------- 网络-----------------------#
+    # ----------------------- 网络-----------------------#
     feature_size = 256
-    model_encoder = models.video.r3d_18().cuda()
+    model_encoder = models.video.r3d_18(args.d3model_pretrain).cuda()
     model_encoder.fc = nn.Linear(model_encoder.fc.in_features, feature_size).cuda()
     img_encoder = get_model_encoder(feature_size, args.pretrain).cuda()
     relation_net = nn.Sequential(
@@ -162,7 +163,6 @@ if __name__ == '__main__':
     model_scheduler = StepLR(model_optimizer, step_size=10, gamma=0.1)
     # ----------------------- 模型相关-----------------------#
 
-
     # ----------------------- 数据相关-----------------------#
 
     train_data = PDataSet(args, args.init_csv, 'train', transform=train_transform, model_dict=model_dict,
@@ -174,6 +174,6 @@ if __name__ == '__main__':
     loss_fn = nn.CrossEntropyLoss()
     for epo in range(1, 1 + epoch):
         acc, loss = train_epoch(epo, imgs_loader, get_model_img, model, model_optimizer, loss_fn,
-                           model_dict=model_dict, model_img_per_class=model_img_per_class)
+                                model_dict=model_dict, model_img_per_class=model_img_per_class)
         model_scheduler.step()
-        print("acc",acc, "loss", loss)
+        print("acc", acc, "loss", loss)
