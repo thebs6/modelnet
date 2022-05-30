@@ -56,7 +56,7 @@ def parse_opt():
     parser.add_argument('--step_size', default=15, type=int)
     parser.add_argument('--T_max', default=20)
     parser.add_argument('--model', default='resnet18')
-    parser.add_argument('--pretrain', default=False)
+    parser.add_argument('--pretrain', default=True)
     parser.add_argument('--optimizer', default='SGD')
     parser.add_argument('--freeze', default=True)
     parser.add_argument('--model_mode', default=0, type=int)
@@ -69,7 +69,7 @@ def parse_opt():
 
 
 def get_model_encoder(feature_size, pretrain):
-    net = models.resnet18(pretrain=pretrain)
+    net = models.resnet18(pretrained=pretrain)
     net.fc = nn.Linear(net.fc.in_features, feature_size)
     return net
 
