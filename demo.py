@@ -239,7 +239,7 @@ if __name__ == '__main__':
         print('valid_loss', valid_loss, 'valid_acc', valid_acc.item())
         if train_loss < min_loss:
             min_loss = train_loss
-            torch.save(model, f"{args.model_folder}/model{epo}_{train_loss}.pth")
-        torch.save(model, f"{args.model_folder}/last_model.pth")
+            torch.save(model.state_dict(), f"{args.model_folder}/model{epo}_{train_loss}.pth")
+        torch.save(model.state_dict(), f"{args.model_folder}/last_model.pth")
         model_scheduler.step()
     # ----------------------- 训练-----------------------#
