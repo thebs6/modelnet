@@ -234,7 +234,9 @@ if __name__ == '__main__':
         writer.add_scalars("loss", {"train_loss": train_loss, "valid_loss": valid_loss}, epo)
         writer.add_scalars("accuracy", {"train_acc": train_acc, "valid_acc": valid_acc}, epo)
         writer.add_scalar("lr", model_optimizer.state_dict()['param_groups'][0]['lr'])
-
+        
+        print('train_loss', train_loss, 'train_acc', train_acc)
+        print('valid_loss', valid_loss, 'valid_acc', valid_acc)
         if train_loss < min_loss:
             min_loss = train_loss
             torch.save(model, f"{args.model_folder}/model{epo}_{train_loss}.pth")
