@@ -154,6 +154,7 @@ if __name__ == '__main__':
     strtime = time.strftime("%Y%m%d_%H%M%S", time.localtime(time.time()))
     print("start_time:", strtime)
     args = parse_opt()
+    print(args)
     log_path = args.log_path + '/' + strtime
     writer = SummaryWriter(log_path)
 
