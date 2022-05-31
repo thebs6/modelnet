@@ -221,9 +221,8 @@ if __name__ == '__main__':
     loss_fn = nn.CrossEntropyLoss()
     min_loss = 1.0
     for epo in range(1, 1 + epoch):
-        # train_acc, train_loss = train_epoch(epo, imgs_loader, get_model_img, model, model_optimizer, loss_fn,
-        #                                     model_dict=model_dict, model_img_per_class=model_img_per_class)
-        train_acc , train_loss = 0, 0
+        train_acc, train_loss = train_epoch(epo, imgs_loader, get_model_img, model, model_optimizer, loss_fn,
+                                            model_dict=model_dict, model_img_per_class=model_img_per_class)
         valid_acc, valid_loss = valid_epoch(epo, valid_loader, get_model_img, model, loss_fn,
                                             model_dict=model_dict, model_img_per_class=model_img_per_class)
 
