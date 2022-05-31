@@ -226,18 +226,18 @@ if __name__ == '__main__':
     loss_fn = nn.CrossEntropyLoss()
     min_loss = 1.0
     for epo in range(1, 1 + epoch):
-        # train_acc, train_loss = train_epoch(epo, imgs_loader, get_model_img, model, model_optimizer, loss_fn,
-        #                                     model_dict=model_dict, model_img_per_class=model_img_per_class)
+        train_acc, train_loss = train_epoch(epo, imgs_loader, get_model_img, model, model_optimizer, loss_fn,
+                                            model_dict=model_dict, model_img_per_class=model_img_per_class)
         valid_acc, valid_loss = valid_epoch(epo, valid_loader, get_model_img, model, loss_fn,
                                             model_dict=model_dict, model_img_per_class=model_img_per_class)
 
-        # writer.add_scalars("loss", {"train_loss": train_loss, "valid_loss": valid_loss}, epo)
-        # writer.add_scalars("accuracy", {"train_acc": train_acc, "valid_acc": valid_acc}, epo)
-        # writer.add_scalar("lr", model_optimizer.state_dict()['param_groups'][0]['lr'])
-        #
-        # if train_loss < min_loss:
-        #     min_loss = train_loss
-        #     torch.save(model, f"{args.model_folder}/model{epo}_{train_loss}.pth")
-        # torch.save(model, f"{args.model_folder}/last_model.pth")
+        writer.add_scalars("loss", {"train_loss": train_loss, "valid_loss": valid_loss}, epo)
+        writer.add_scalars("accuracy", {"train_acc": train_acc, "valid_acc": valid_acc}, epo)
+        writer.add_scalar("lr", model_optimizer.state_dict()['param_groups'][0]['lr'])
+
+        if train_loss < min_loss:
+            min_loss = train_loss
+            torch.save(model, f"{args.model_folder}/model{epo}_{train_loss}.pth")
+        torch.save(model, f"{args.model_folder}/last_model.pth")
         model_scheduler.step()
     # ----------------------- 训练-----------------------#
