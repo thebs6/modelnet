@@ -74,7 +74,7 @@ def parse_opt():
 
 
 def get_model_encoder(feature_size, pretrain):
-    net = models.resnet50(pretrained=pretrain)
+    net = models.resnet18(pretrained=pretrain)
     net.fc = nn.Linear(net.fc.in_features, feature_size)
     return net
 
@@ -156,6 +156,7 @@ def get_valid_loader(valid_mode):
         pass
 
 
+
 if __name__ == '__main__':
     strtime = time.strftime("%Y%m%d_%H%M%S", time.localtime(time.time()))
     print("start_time:", strtime)
@@ -234,7 +235,7 @@ if __name__ == '__main__':
         writer.add_scalars("loss", {"train_loss": train_loss, "valid_loss": valid_loss}, epo)
         writer.add_scalars("accuracy", {"train_acc": train_acc, "valid_acc": valid_acc}, epo)
         writer.add_scalar("lr", model_optimizer.state_dict()['param_groups'][0]['lr'])
-        
+
         print('train_loss', train_loss, 'train_acc', train_acc.item())
         print('valid_loss', valid_loss, 'valid_acc', valid_acc.item())
         if train_loss < min_loss:
@@ -243,3 +244,6 @@ if __name__ == '__main__':
         torch.save(model.state_dict(), f"{args.model_folder}/last_model.pth")
         model_scheduler.step()
     # ----------------------- 训练-----------------------#
+
+
+
