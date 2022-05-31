@@ -1,4 +1,6 @@
 import argparse
+import time
+
 from numpy import random
 
 import torch
@@ -13,7 +15,7 @@ import numpy as np
 from PIL import Image
 from tqdm import tqdm
 import pickle
-import tensorboard
+from torch.utils.tensorboard import SummaryWriter
 from PDataSet import PDataSet
 
 
@@ -50,7 +52,7 @@ def parse_opt():
     parser.add_argument('--v_batch', default=64, type=int)
     parser.add_argument('--image_size', default=224, type=int)
     parser.add_argument('--lr', default=0.001, type=float)
-    parser.add_argument('--model_folder', default='./model')
+    parser.add_argument('--model_folder', default='./models')
     parser.add_argument('--workers', default=0, type=int)
     parser.add_argument('--scheduler', default='StepLR')
     parser.add_argument('--step_size', default=15, type=int)
@@ -64,6 +66,8 @@ def parse_opt():
     parser.add_argument('--image_folder_type', default=1, type=int)
     parser.add_argument('--model_img_per_class', default=5, type=int)
     parser.add_argument('--d3model_pretrain', default=True, type=bool)
+    parser.add_argument('--valid_mode', default=0, type=int)
+    parser.add_argument('--log_path', default='log', type=str)
 
     args = parser.parse_args()
     return args
@@ -116,18 +120,53 @@ def train_epoch(epo, train_loader, model_imgs, model, optimizer, loss_fn, model_
     return accuracy / (train_loader.batch_size * len(train_loader)), epoch_loss / len(train_loader)
 
 
+@torch.no_grad()
+def valid_epoch(epo, valid_loader, model_imgs, model, loss_fn, model_dict, model_img_per_class):
+    model.eval()
+    epoch_loss = 0.0
+    accuracy = 0.0
+    bar = tqdm(valid_loader, total=len(valid_loader), position=0)
+    bar.set_postfix({'epoch': epo})
+    for batch, target in bar:
+        batch, target = batch.cuda(), target.cuda()
+        model_images = torch.from_numpy(model_imgs(model_dict, model_img_per_class, 0)).to(torch.float32).cuda()
+        output = model(model_images, batch)
+        loss = loss_fn(output, target)
+        accuracy += (output.argmax(1) == target).sum()
+        epoch_loss += loss.item()
+    return accuracy / (valid_loader.batch_size * len(valid_loader)), epoch_loss / len(valid_loader)
+
+
 def get_model_img(model_dict, model_img_per_class, item):
     model_img = [v['imgs_v'][random.randint(0, 100, model_img_per_class)] for v in model_dict]
     model_img = np.concatenate(np.expand_dims(model_img, axis=0), axis=0)
     model_img = np.transpose(model_img, (0, 4, 1, 2, 3))
     return model_img
 
+def get_valid_loader(valid_mode) :
+    # 0: 常规验证
+    #Todo 1: 迁移学习验证，图片是10类
+    if valid_mode == 0:
+        pass
+
 
 if __name__ == '__main__':
+    strtime = time.strftime("%Y%m%d_%H%M%S", time.localtime(time.time()))
+    print("start_time:", strtime)
     args = parse_opt()
+    log_path = args.log_path + '/' + strtime
+    writer = SummaryWriter(log_path)
+
     train_transform = tf.Compose([
         tf.RandomResizedCrop(args.image_size),
         tf.RandomHorizontalFlip(),
+        tf.ToTensor(),
+        tf.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+    ])
+
+    valid_transform = tf.Compose([
+        tf.Resize(256),
+        tf.CenterCrop(224),
         tf.ToTensor(),
         tf.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
@@ -164,16 +203,37 @@ if __name__ == '__main__':
     # ----------------------- 模型相关-----------------------#
 
     # ----------------------- 数据相关-----------------------#
-
     train_data = PDataSet(args, args.init_csv, 'train', transform=train_transform, model_dict=model_dict,
                           model_img_per_class=model_img_per_class)
     imgs_loader = DataLoader(train_data, batch_size=args.t_batch, shuffle=True, num_workers=args.workers,
                              drop_last=False)
+
+
+    valid_data = PDataSet(args, args.init_csv, 'valid', transform=train_transform, model_dict=model_dict,
+                          model_img_per_class=model_img_per_class)
+    valid_loader = DataLoader(valid_data, batch_size=args.v_batch, shuffle=True, num_workers=args.workers,
+                              drop_last=False)
     # ----------------------- 数据相关-----------------------#
+
+    # ----------------------- 训练-----------------------#
     epoch = args.epoch
     loss_fn = nn.CrossEntropyLoss()
+    min_loss = 1.0
     for epo in range(1, 1 + epoch):
-        acc, loss = train_epoch(epo, imgs_loader, get_model_img, model, model_optimizer, loss_fn,
-                                model_dict=model_dict, model_img_per_class=model_img_per_class)
+        # train_acc, train_loss = train_epoch(epo, imgs_loader, get_model_img, model, model_optimizer, loss_fn,
+        #                                     model_dict=model_dict, model_img_per_class=model_img_per_class)
+        train_acc , train_loss = 0, 0
+        valid_acc, valid_loss = valid_epoch(epo, valid_loader, get_model_img, model, loss_fn,
+                                            model_dict=model_dict, model_img_per_class=model_img_per_class)
+
+        writer.add_scalars("loss", {"train_loss": train_loss, "valid_loss": valid_loss}, epo)
+        writer.add_scalars("accuracy", {"train_acc": train_acc, "valid_acc": valid_acc}, epo)
+        writer.add_scalar("lr", model_optimizer.state_dict()['param_groups'][0]['lr'])
+
+        if train_loss < min_loss:
+            min_loss = train_loss
+            torch.save(model, f"{args.model_folder}/model{epo}_{train_loss}.pth")
+        torch.save(model, f"{args.model_folder}/last_model.pth")
         model_scheduler.step()
-        print("acc", acc, "loss", loss)
+    # ----------------------- 训练-----------------------#
+

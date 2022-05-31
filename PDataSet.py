@@ -41,7 +41,3 @@ class PDataSet(Dataset):
         label = self.resdf.iloc[item]['label']
         if self.data_type == 'images':
             return image, label
-        # elif self.data_type == 'models':
-        #     model_img = [v['imgs_v'][random.randint(0, 100, self.model_img_per_class)] for v in self.model_dict]
-        #     model_img = np.concatenate(model_img, axis=0)
-        #     return model_img
