@@ -105,8 +105,8 @@ def train_epoch(epo, train_loader, model_imgs, model, optimizer, loss_fn, model_
     model.train()
     epoch_loss = 0.0
     accuracy = 0.0
+    sb = 0.0
     bar = tqdm(train_loader, total=len(train_loader), position=0)
-    bar.set_postfix({'epoch': epo})
     for batch, target in bar:
         batch, target = batch.cuda(), target.cuda()
         model_images = torch.from_numpy(model_imgs(model_dict, model_img_per_class, 0)).to(torch.float32).cuda()
@@ -117,6 +117,8 @@ def train_epoch(epo, train_loader, model_imgs, model, optimizer, loss_fn, model_
         accuracy += (output.argmax(1) == target).sum()
         optimizer.step()
         epoch_loss += loss.item()
+        sb += batch.shape[0]
+        bar.set_postfix({'epoch': epo, "train_acc": (accuracy / sb).item(), "train_loss": epoch_loss / sb})
     return accuracy / (train_loader.batch_size * len(train_loader)), epoch_loss / len(train_loader)
 
 
@@ -126,7 +128,7 @@ def valid_epoch(epo, valid_loader, model_imgs, model, loss_fn, model_dict, model
     epoch_loss = 0.0
     accuracy = 0.0
     bar = tqdm(valid_loader, total=len(valid_loader), position=0)
-    bar.set_postfix({'epoch': epo})
+    sb = 0
     for batch, target in bar:
         batch, target = batch.cuda(), target.cuda()
         model_images = torch.from_numpy(model_imgs(model_dict, model_img_per_class, 0)).to(torch.float32).cuda()
@@ -134,6 +136,9 @@ def valid_epoch(epo, valid_loader, model_imgs, model, loss_fn, model_dict, model
         loss = loss_fn(output, target)
         accuracy += (output.argmax(1) == target).sum()
         epoch_loss += loss.item()
+        sb += batch.shape[0]
+        bar.set_postfix({'epoch': epo})
+        bar.set_postfix({"valid_acc": (accuracy / sb).item(), "valid_loss": epoch_loss / sb})
     return accuracy / (valid_loader.batch_size * len(valid_loader)), epoch_loss / len(valid_loader)
 
 
@@ -143,9 +148,10 @@ def get_model_img(model_dict, model_img_per_class, item):
     model_img = np.transpose(model_img, (0, 4, 1, 2, 3))
     return model_img
 
-def get_valid_loader(valid_mode) :
+
+def get_valid_loader(valid_mode):
     # 0: 常规验证
-    #Todo 1: 迁移学习验证，图片是10类
+    # Todo 1: 迁移学习验证，图片是10类
     if valid_mode == 0:
         pass
 
@@ -209,7 +215,6 @@ if __name__ == '__main__':
     imgs_loader = DataLoader(train_data, batch_size=args.t_batch, shuffle=True, num_workers=args.workers,
                              drop_last=False)
 
-
     valid_data = PDataSet(args, args.init_csv, 'valid', transform=train_transform, model_dict=model_dict,
                           model_img_per_class=model_img_per_class)
     valid_loader = DataLoader(valid_data, batch_size=args.v_batch, shuffle=True, num_workers=args.workers,
@@ -221,19 +226,18 @@ if __name__ == '__main__':
     loss_fn = nn.CrossEntropyLoss()
     min_loss = 1.0
     for epo in range(1, 1 + epoch):
-        train_acc, train_loss = train_epoch(epo, imgs_loader, get_model_img, model, model_optimizer, loss_fn,
-                                            model_dict=model_dict, model_img_per_class=model_img_per_class)
+        # train_acc, train_loss = train_epoch(epo, imgs_loader, get_model_img, model, model_optimizer, loss_fn,
+        #                                     model_dict=model_dict, model_img_per_class=model_img_per_class)
         valid_acc, valid_loss = valid_epoch(epo, valid_loader, get_model_img, model, loss_fn,
                                             model_dict=model_dict, model_img_per_class=model_img_per_class)
 
-        writer.add_scalars("loss", {"train_loss": train_loss, "valid_loss": valid_loss}, epo)
-        writer.add_scalars("accuracy", {"train_acc": train_acc, "valid_acc": valid_acc}, epo)
-        writer.add_scalar("lr", model_optimizer.state_dict()['param_groups'][0]['lr'])
-
-        if train_loss < min_loss:
-            min_loss = train_loss
-            torch.save(model, f"{args.model_folder}/model{epo}_{train_loss}.pth")
-        torch.save(model, f"{args.model_folder}/last_model.pth")
+        # writer.add_scalars("loss", {"train_loss": train_loss, "valid_loss": valid_loss}, epo)
+        # writer.add_scalars("accuracy", {"train_acc": train_acc, "valid_acc": valid_acc}, epo)
+        # writer.add_scalar("lr", model_optimizer.state_dict()['param_groups'][0]['lr'])
+        #
+        # if train_loss < min_loss:
+        #     min_loss = train_loss
+        #     torch.save(model, f"{args.model_folder}/model{epo}_{train_loss}.pth")
+        # torch.save(model, f"{args.model_folder}/last_model.pth")
         model_scheduler.step()
     # ----------------------- 训练-----------------------#
-
