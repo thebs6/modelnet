@@ -84,9 +84,8 @@ def get_model_encoder(feature_size, pretrain, model):
 
 
 class net(nn.Module):
-    def __init__(self, model_encoder, img_encoder, relation_net):
+    def __init__(self, img_encoder, relation_net):
         super(net, self).__init__()
-        self.model_encoder = model_encoder
         self.img_encoder = img_encoder
         self.relation_net = relation_net
 
@@ -189,8 +188,8 @@ if __name__ == '__main__':
 
     # ----------------------- 网络-----------------------#
     feature_size = 256
-    model_encoder = models.video.r3d_18(args.d3model_pretrain).cuda()
-    model_encoder.fc = nn.Linear(model_encoder.fc.in_features, feature_size).cuda()
+    # model_encoder = models.video.r3d_18(args.d3model_pretrain).cuda()
+    # model_encoder.fc = nn.Linear(model_encoder.fc.in_features, feature_size).cuda()
     img_encoder = get_model_encoder(feature_size, args.pretrain, args.model).cuda()
     relation_net = nn.Sequential(
         nn.Linear(feature_size , feature_size // 2),
@@ -202,7 +201,7 @@ if __name__ == '__main__':
         nn.Linear(feature_size // 4, 9),
         nn.LogSoftmax(dim=1)
     ).cuda()
-    model = net(model_encoder, img_encoder, relation_net)
+    model = net(img_encoder, relation_net)
     # ----------------------- 网络-----------------------#
 
     # ----------------------- 模型相关-----------------------#
