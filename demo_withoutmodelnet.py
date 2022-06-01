@@ -73,8 +73,12 @@ def parse_opt():
     return args
 
 
-def get_model_encoder(feature_size, pretrain):
-    net = models.resnet50(pretrained=pretrain)
+def get_model_encoder(feature_size, pretrain, model):
+    if model == 'resnet18':
+        net = models.resnet18(pretrained=pretrain)
+    elif model == 'resnet50':
+        net = models.resnet50(pretrained=pretrain)
+    # net = models.resnet50(pretrained=pretrain)
     net.fc = nn.Linear(net.fc.in_features, feature_size)
     return net
 
@@ -187,7 +191,7 @@ if __name__ == '__main__':
     feature_size = 256
     model_encoder = models.video.r3d_18(args.d3model_pretrain).cuda()
     model_encoder.fc = nn.Linear(model_encoder.fc.in_features, feature_size).cuda()
-    img_encoder = get_model_encoder(feature_size, args.pretrain).cuda()
+    img_encoder = get_model_encoder(feature_size, args.pretrain, args.model).cuda()
     relation_net = nn.Sequential(
         nn.Linear(feature_size , feature_size // 2),
         nn.ReLU(),
